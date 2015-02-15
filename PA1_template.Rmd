@@ -1,0 +1,117 @@
+Reproducible Research: Peer Assignment 1
+========================================================
+
+## Loading and preprocessing the data
+
+
+```{r}
+activity <- read.csv("activity.csv")
+activity <- transform(activity, date = as.Date(date, "%Y-%m-%d"))
+total = aggregate(activity$steps ~ activity$date, activity, sum)
+```
+
+
+## What is mean total number of steps taken per day?
+
+
+### Histogram
+
+The histogram of the number of steps taken per day is shown below.
+```{r}
+library(lattice)
+# Draw a histogram of the total number of steps taken each day
+histogram(total[,2], xlab = "Number of steps", main="Histogram of Number of steps taken each day")
+```
+
+###  Mean and median of total number of steps taken per day
+The mean number of steps per day is `r mean(total[,2], na.rm = TRUE)` while the median is `r median(total[,2], na.rm = TRUE)`. 
+
+```{r}
+# mean and median of number of steps taken per day
+mean(total[,2], na.rm = TRUE)
+median(total[,2], na.rm = TRUE)
+```
+
+
+
+## Average daily activity pattern
+
+### Time series plot
+
+Plot of the time series of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis).
+
+```{r}
+intervals = aggregate(activity$steps ~ activity$interval, activity, mean)
+plot(intervals[ ,1], intervals[ ,2], type = "l", xlab = "intervals", ylab = "steps", main = "Average number of steps by interval")
+```
+
+### Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+The 5-minute interval with maximum number of steps is interval `r intervals[ ,1][which(intervals[ ,2] == max(intervals[ ,2]))]`. 
+
+
+## Imputing missing values
+
+### Total number of missing values in the dataset
+
+The total number of missing values in the dataset is `r nrow(activity[!complete.cases(activity), ])`.
+
+### Filling in all of the missing values in the dataset.
+
+A new dataset is created. It is equal to the original dataset but where the missing data is replaced by the mean of the 5-minute interval.
+
+```{r}
+newactivity = activity
+for (k in 1:nrow(activity)){
+  newactivity[k, 1] = ifelse(is.na(activity[k, 1]), intervals[which(intervals[ ,1] == activity[k, 3]), 2], activity[k, 1])
+}
+```
+
+Check to see if all values have been replaced: total number of missing values in the newactivity dataset is `r nrow(newactivity[!complete.cases(newactivity), ])`.
+
+
+### Histogram, mean and median of total number of steps
+
+```{r}
+total_new = aggregate(newactivity$steps ~ newactivity$date, newactivity, sum)
+library(lattice)
+histogram(total_new[,2], xlab = "Number of steps", main="Histogram of Number of steps taken each day (without NAs)")
+```
+
+The mean number of steps per day is `r mean(total_new[,2], na.rm = TRUE)` while the median is `r median(total_new[,2], na.rm = TRUE)`. 
+
+```{r}
+# mean and median of number of steps taken per day
+mean(total_new[,2], na.rm = TRUE)
+median(total_new[,2], na.rm = TRUE)
+```
+
+The mean and median are the same as before (just a one unit difference for the median). This is due to the fact that I have allocated more weight to the mean (because of the imputation of missing data).
+
+## Differences in activity patterns between weekdays and weekends?
+
+I compare the average number of steps during the weekend and the weekdays. As can be seen from the plot below, there are more steps during weekends than during weekdays.
+
+```{r}
+newactivity$date = as.Date(newactivity$date)
+newactivity$date = strptime(newactivity$date, format="%Y-%m-%d")
+
+for (k in 1:nrow(newactivity)){
+  newactivity$weekday[k] = ifelse(weekdays(newactivity$date[k]) == "Saturday" | weekdays(newactivity$date[k]) == "Sunday",  "weekend", "weekday")
+}
+activity_weekday = newactivity[newactivity$weekday == "weekday", ]
+activity_weekend = newactivity[newactivity$weekday == "weekend", ]
+intervalweekday = aggregate(activity_weekday$steps ~ activity_weekday$interval, activity_weekday, mean)
+intervalweekend = aggregate(activity_weekend$steps ~ activity_weekend$interval, activity_weekend, mean)
+```
+
+
+
+```{r}
+par(mfrow=c(2,1))
+plot(intervalweekday[ ,1], intervalweekday[ ,2], type = "l", xlab = "intervals", ylab = "steps", main = "Average number of steps by interval (weekdays)")
+plot(intervalweekend[ ,1], intervalweekend[ ,2], type = "l", xlab = "intervals", ylab = "steps", main = "Average number of steps by interval (weekend)")
+```
+
+
+
